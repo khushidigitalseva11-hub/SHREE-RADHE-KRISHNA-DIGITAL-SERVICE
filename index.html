@@ -1,0 +1,470 @@
+import React, { useState, useEffect } from 'react';
+import { supabase, STATUS_LABELS } from './supabase';
+import { DigitalService, DigitalApplication } from './types/digitalSeva';
+import { CustomerPortal } from './components/CustomerPortal';
+import { AdminPanel } from './components/AdminPanel';
+import { AdminLoginModal } from './components/AdminLoginModal';
+import { DirectorChat } from './components/DirectorChat';
+import { ChatMessage, AssistantRole, ImageResolution } from './types/storyboard';
+import { Shield, Sparkles, Building, Phone, UserCheck } from 'lucide-react';
+
+const FALLBACK_SERVICES: DigitalService[] = [
+  { id: 'srv-1', service_code: 'PAN', name: 'નવું PAN Card', price: 250, description: 'નવું PAN Card બનાવવા માટે ઓનલાઈન અરજી સહાય.', active: true, display_order: 1, category: 'PAN Card' },
+  { id: 'srv-2', service_code: 'PANC', name: 'PAN Card સુધારો', price: 250, description: 'PAN Card નામ, જન્મ તારીખ કે ફોટો સુધારા માટે સેવા.', active: true, display_order: 2, category: 'PAN Card' },
+  { id: 'srv-3', service_code: 'ENIR', name: 'ઈ-નિર્માણ કાર્ડ', price: 150, description: 'બાંધકામ શ્રમિક ઈ-નિર્માણ Card માટે સહાય.', active: true, display_order: 3, category: 'Government Scheme' },
+  { id: 'srv-4', service_code: 'KMM', name: 'કુંવરબાઈનું મામેરું યોજના', price: 250, description: 'કુંવરબાઈનું મામેરું યોજના માટે સરકારી સહાય અરજી.', active: true, display_order: 4, category: 'Government Scheme' },
+  { id: 'srv-5', service_code: 'AYU', name: 'નવું આયુષ્માન કાર્ડ', price: 150, description: 'PMJAY આયુષ્માન કાર્ડ ₹5 થી ₹10 લાખ સુધીની મફત સારવાર માટે.', active: true, display_order: 5, category: 'Health' },
+  { id: 'srv-6', service_code: 'AYUK', name: 'આયુષ્માન Card Update / KYC', price: 50, description: 'હાલના આયુષ્માન કાર્ડમાં e-KYC અને સુધારો.', active: true, display_order: 6, category: 'Health' },
+  { id: 'srv-7', service_code: 'PMK', name: 'PM કિસાન સહાય', price: 250, description: 'ખેડૂત સન્માન નિધિ યોજના નોંધણી અને સહાય.', active: true, display_order: 7, category: 'Farmer' },
+  { id: 'srv-8', service_code: 'PMKK', name: 'PM કિસાન KYC', price: 50, description: 'PM Kisan હપ્તા માટે જરૂરી e-KYC બાયોમેટ્રિક / ઓટીપી.', active: true, display_order: 8, category: 'Farmer' },
+  { id: 'srv-9', service_code: 'LAND', name: 'જમીનની માહિતી / PDF', price: 10, description: '7/12, 8-A, હકપત્રક 6 ની નકલ અને PDF ડાઉનલોડ.', active: true, display_order: 9, category: 'Land' },
+  { id: 'srv-10', service_code: 'INC', name: 'આવકનો દાખલો', price: 250, description: 'મામલતદાર / તાલુકા પંચાયત આવકનું પ્રમાણપત્ર.', active: true, display_order: 10, category: 'Certificate' },
+  { id: 'srv-11', service_code: 'PF', name: 'PF Online Services', price: 250, description: 'PF withdrawal, KYC, પાસબુક અને ક્લેમ સહાય.', active: true, display_order: 11, category: 'PF' },
+  { id: 'srv-12', service_code: 'FARM', name: 'ખેડૂત નોંધણી', price: 150, description: 'i-Khedut પોર્ટલ પર સાધન સહાય અને નોંધણી.', active: true, display_order: 12, category: 'Farmer' },
+  { id: 'srv-13', service_code: 'MPAN', name: 'Minor PAN Card', price: 250, description: '18 વર્ષથી ઓછી ઉંમરના બાળકો માટે PAN Card.', active: true, display_order: 13, category: 'PAN Card' },
+  { id: 'srv-14', service_code: 'VOTER', name: 'નવું ચૂંટણી કાર્ડ', price: 150, description: 'Voter ID Card નવું ફોર્મ 6 ભરવા માટે સહાય.', active: true, display_order: 14, category: 'Voter' },
+  { id: 'srv-15', service_code: 'VOTERC', name: 'ચૂંટણી કાર્ડ સુધારો', price: 150, description: 'Voter ID નામ કે સરનામું સુધારો (ફોર્મ 8).', active: true, display_order: 15, category: 'Voter' },
+  { id: 'srv-16', service_code: 'ITR', name: 'Income Tax Return', price: 2500, description: 'ITR-1 / ITR-2 ઇન્કમટેક્સ રિટર્ન ફાઈલિંગ સહાય.', active: true, display_order: 16, category: 'Income Tax' },
+  { id: 'srv-17', service_code: 'ESHRAM', name: 'ઈ-શ્રમ કાર્ડ', price: 150, description: 'અસંગઠિત કામદારો માટે e-Shram Card નોંધણી.', active: true, display_order: 17, category: 'Government Scheme' },
+  { id: 'srv-18', service_code: 'UDYAM', name: 'Udyam Registration', price: 200, description: 'MSME ઉદ્યોગ આધાર પ્રમાણપત્ર રજિસ્ટ્રેશન.', active: true, display_order: 18, category: 'Business' },
+  { id: 'srv-19', service_code: 'NOC', name: 'પોલીસ વેરિફિકેશન (NOC)', price: 150, description: 'Police Verification / Character Certificate સહાય.', active: true, display_order: 19, category: 'Police' },
+  { id: 'srv-20', service_code: 'ABHA', name: 'ABHA Card', price: 150, description: 'ડિજિટલ હેલ્થ એકાઉન્ટ ABHA કાર્ડ નોંધણી.', active: true, display_order: 20, category: 'Health' },
+  { id: 'srv-21', service_code: 'PVC', name: 'PVC Card Printing', price: 150, description: 'All India PVC Smart Card Print & Home Delivery.', active: true, display_order: 21, category: 'Printing' },
+];
+
+export default function App() {
+  const [view, setView] = useState<'customer' | 'admin'>('customer');
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [adminUser, setAdminUser] = useState<string | null>(() => localStorage.getItem('srk_admin_email'));
+  const [adminLoginModalOpen, setAdminLoginModalOpen] = useState<boolean>(false);
+
+  // Data states
+  const [services, setServices] = useState<DigitalService[]>(FALLBACK_SERVICES);
+  const [applications, setApplications] = useState<DigitalApplication[]>([]);
+  const [toast, setToast] = useState<string | null>(null);
+
+  // Gemini AI Digital Sahayak Chatbot State
+  const [chatOpen, setChatOpen] = useState<boolean>(false);
+  const [chatRole, setChatRole] = useState<AssistantRole>('copilot');
+  const [chatLoading, setChatLoading] = useState<boolean>(false);
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
+    {
+      id: 'welcome-seva',
+      role: 'model',
+      content: `નમસ્તે! હું **શ્રી રાધે કૃષ્ણ ડિજિટલ સેવા સહાયક** છું.\n\nતમને PAN Card, આયુષ્માન કાર્ડ, PM-કિસાન, આવકનો દાખલો, Udyam કે અન્ય કોઈપણ સરકારી યોજના વિશે માહિતી અથવા કયા દસ્તાવેજોની જરૂર છે તે પૂછી શકો છો.`,
+      timestamp: Date.now(),
+      modelUsed: 'gemini-3.5-flash',
+      roleTitle: 'Production Co-Pilot / યોજના સહાયક',
+    },
+  ]);
+
+  const showToast = (msg: string) => {
+    setToast(msg);
+    setTimeout(() => setToast(null), 4000);
+  };
+
+  // 1. Initial Load: Auth Session, Services, Applications
+  useEffect(() => {
+    // Check Supabase Auth
+    supabase.auth.getSession().then(({ data }) => {
+      if (data?.session?.user) {
+        setCurrentUser(data.session.user);
+      }
+    });
+
+    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
+      setCurrentUser(session?.user || null);
+      if (session?.user) {
+        fetchApplications(session.user.id);
+      }
+    });
+
+    loadServices();
+    fetchApplications();
+
+    return () => {
+      authListener?.subscription.unsubscribe();
+    };
+  }, []);
+
+  // Fetch Services from Supabase
+  const loadServices = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('services')
+        .select('*')
+        .order('display_order', { ascending: true });
+
+      if (!error && data && data.length > 0) {
+        setServices(data);
+      } else {
+        // Try backend proxy
+        const res = await fetch('/api/digital-seva/services');
+        if (res.ok) {
+          const s = await res.json();
+          if (s && s.length > 0) setServices(s);
+        }
+      }
+    } catch (e) {
+      console.warn('Load services fallback to default:', e);
+    }
+  };
+
+  // Fetch Applications
+  const fetchApplications = async (customerId?: string) => {
+    try {
+      let query = supabase.from('applications').select('*').order('submitted_at', { ascending: false });
+      if (customerId) {
+        query = query.eq('customer_id', customerId);
+      }
+      const { data, error } = await query;
+      if (!error && data) {
+        setApplications(data);
+      } else {
+        // Fallback to backend route
+        const url = customerId
+          ? `/api/digital-seva/applications?customer_id=${customerId}`
+          : '/api/digital-seva/applications';
+        const res = await fetch(url);
+        if (res.ok) {
+          const apps = await res.json();
+          setApplications(apps || []);
+        }
+      }
+    } catch (e) {
+      console.warn('Fetch applications error:', e);
+    }
+  };
+
+  // Customer Auth Functions
+  const handleCustomerLogin = async (email: string, pass: string) => {
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password: pass });
+    if (error) throw error;
+    setCurrentUser(data.user);
+    showToast(`Welcome ${data.user?.user_metadata?.full_name || email}!`);
+    await fetchApplications(data.user?.id);
+  };
+
+  const handleCustomerRegister = async (regData: {
+    name: string;
+    mobile: string;
+    email: string;
+    pass: string;
+    address: string;
+  }) => {
+    const { data, error } = await supabase.auth.signUp({
+      email: regData.email,
+      password: regData.pass,
+      options: {
+        data: {
+          full_name: regData.name,
+          mobile: regData.mobile,
+          address: regData.address,
+        },
+      },
+    });
+    if (error) throw error;
+    if (data.session) {
+      setCurrentUser(data.session.user);
+      showToast('ખાતું સફળતાપૂર્વક બની ગયું!');
+    } else {
+      showToast('Account બની ગયું! જો Email Confirmation જરૂરી હોય તો Email ચકાસો.');
+    }
+  };
+
+  const handleCustomerForgotPassword = async (email: string) => {
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: window.location.href,
+    });
+    if (error) throw error;
+  };
+
+  const handleCustomerLogout = async () => {
+    await supabase.auth.signOut();
+    setCurrentUser(null);
+    showToast('Logged out successfully.');
+  };
+
+  // Submit Application
+  const handleSubmitApplication = async (service: DigitalService, formData: Record<string, any>) => {
+    const payload = {
+      p_service_id: service.id,
+      p_form_data: formData,
+    };
+
+    try {
+      // First try Supabase RPC
+      const { data, error } = await supabase.rpc('create_customer_application', payload);
+      if (!error && data) {
+        const app = Array.isArray(data) ? data[0] : data;
+        await fetchApplications(currentUser?.id);
+        showToast(`Application ${app.application_number} Submitted!`);
+        return app;
+      }
+    } catch (rpcErr) {
+      console.warn('RPC create error, using backend fallback:', rpcErr);
+    }
+
+    // Backend endpoint fallback
+    const res = await fetch('/api/digital-seva/application/create', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        customer_id: currentUser?.id,
+        service_id: service.id,
+        service_name: service.name,
+        price: service.price,
+        form_data: formData,
+        applicant_name: formData.app_name,
+        applicant_mobile: formData.app_mobile,
+      }),
+    });
+
+    if (!res.ok) throw new Error('Application could not be created');
+    const created = await res.json();
+    setApplications((prev) => [created, ...prev]);
+    showToast(`Application ${created.application_number} Submitted!`);
+    return created;
+  };
+
+  // Admin: Update Status
+  const handleAdminUpdateStatus = async (applicationId: string, newStatus: string, remark: string) => {
+    const res = await fetch('/api/digital-seva/application/status', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        application_id: applicationId,
+        new_status: newStatus,
+        remark,
+        changed_by: adminUser || 'Admin',
+      }),
+    });
+
+    if (!res.ok) {
+      throw new Error('Failed to update status on server');
+    }
+
+    setApplications((prev) =>
+      prev.map((app) =>
+        app.id === applicationId
+          ? {
+              ...app,
+              status: newStatus,
+              admin_remark: remark,
+              updated_at: new Date().toISOString(),
+            }
+          : app
+      )
+    );
+
+    showToast(`Status updated to ${STATUS_LABELS[newStatus]?.gu || newStatus}`);
+  };
+
+  // Admin: Save Service (Dynamic Service Builder)
+  const handleAdminSaveService = async (service: Partial<DigitalService>) => {
+    if (service.id) {
+      // Edit
+      setServices((prev) => prev.map((s) => (s.id === service.id ? ({ ...s, ...service } as DigitalService) : s)));
+      showToast(`Service "${service.name}" updated!`);
+    } else {
+      // Add
+      const newService: DigitalService = {
+        id: 'srv_' + Date.now(),
+        service_code: service.service_code || 'SRK',
+        name: service.name || 'New Service',
+        price: service.price || 150,
+        description: service.description || '',
+        category: service.category || 'Government Scheme',
+        active: service.active ?? true,
+        display_order: service.display_order || services.length + 1,
+      };
+      setServices((prev) => [...prev, newService]);
+      showToast(`New service "${newService.name}" created!`);
+    }
+  };
+
+  // Gemini AI Chat Message Send
+  const handleChatSendMessage = async (content: string, role: AssistantRole) => {
+    const userMsg: ChatMessage = {
+      id: `usr_${Date.now()}`,
+      role: 'user',
+      content,
+      timestamp: Date.now(),
+    };
+
+    const newHistory = [...chatMessages, userMsg];
+    setChatMessages(newHistory);
+    setChatLoading(true);
+
+    try {
+      const res = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          messages: newHistory.map((m) => ({ role: m.role, content: m.content })),
+          role,
+          context: {
+            title: 'SHREE RADHE KRISHNA DIGITAL SERVICE',
+            genre: 'Government Portal Guidance',
+            servicesCount: services.length,
+          },
+        }),
+      });
+
+      if (!res.ok) throw new Error('AI Sahayak response failed');
+      const data = await res.json();
+
+      const aiMsg: ChatMessage = {
+        id: `ai_${Date.now()}`,
+        role: 'model',
+        content: data.reply || 'No response',
+        timestamp: Date.now(),
+        modelUsed: data.modelUsed,
+        roleTitle: data.roleTitle,
+      };
+
+      setChatMessages((prev) => [...prev, aiMsg]);
+    } catch (e: any) {
+      setChatMessages((prev) => [
+        ...prev,
+        {
+          id: `err_${Date.now()}`,
+          role: 'model',
+          content: `Error: ${e.message}`,
+          timestamp: Date.now(),
+        },
+      ]);
+    } finally {
+      setChatLoading(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-[#090d16] text-[#e2e8f0] flex flex-col font-sans">
+      {/* Toast Notification */}
+      {toast && (
+        <div className="fixed bottom-5 right-5 z-50 bg-[#162035]/95 border border-blue-500/40 text-blue-200 text-xs px-4 py-3 rounded-xl shadow-2xl backdrop-blur-md flex items-center gap-2 animate-bounce">
+          <span className="w-2 h-2 rounded-full bg-blue-400" />
+          <span>{toast}</span>
+        </div>
+      )}
+
+      {/* Top Banner Navigation: Switch Customer Portal / Admin Portal */}
+      <div className="bg-[#0b101c] border-b border-[#1a2438] px-4 py-1.5 text-xs">
+        <div className="max-w-7xl mx-auto flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <span className="text-blue-400 font-mono font-bold text-[11px] flex items-center gap-1">
+              🌐 srkdigital.online
+            </span>
+            <span className="text-slate-500">•</span>
+            <span className="text-slate-400 text-[11px] hidden sm:inline">
+              📍 Rudra Complex, Timberwa Road, Sadhli • 📞 8511566026
+            </span>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setView('customer')}
+              className={`px-2.5 py-1 rounded-md text-[11px] font-bold transition-all ${
+                view === 'customer'
+                  ? 'bg-blue-600 text-white shadow-sm'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              Customer View
+            </button>
+
+            <button
+              onClick={() => {
+                if (adminUser) {
+                  setView('admin');
+                } else {
+                  setAdminLoginModalOpen(true);
+                }
+              }}
+              className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-bold transition-all ${
+                view === 'admin'
+                  ? 'bg-emerald-600 text-white shadow-sm'
+                  : 'text-emerald-400 hover:text-emerald-300 bg-emerald-500/10 border border-emerald-500/20'
+              }`}
+            >
+              <Shield className="w-3 h-3" />
+              Admin Portal
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Main View Render */}
+      <div className="flex-1">
+        {view === 'admin' && adminUser ? (
+          <AdminPanel
+            applications={applications}
+            services={services}
+            onUpdateStatus={handleAdminUpdateStatus}
+            onSaveService={handleAdminSaveService}
+            onRefresh={async () => {
+              await loadServices();
+              await fetchApplications();
+              showToast('Data refreshed.');
+            }}
+            onLogout={() => {
+              setAdminUser(null);
+              localStorage.removeItem('srk_admin_email');
+              setView('customer');
+              showToast('Admin logged out.');
+            }}
+            adminEmail={adminUser}
+          />
+        ) : (
+          <CustomerPortal
+            services={services}
+            applications={applications}
+            currentUser={currentUser}
+            onLogin={handleCustomerLogin}
+            onRegister={handleCustomerRegister}
+            onForgotPassword={handleCustomerForgotPassword}
+            onLogout={handleCustomerLogout}
+            onSubmitApplication={handleSubmitApplication}
+            onOpenAdmin={() => setAdminLoginModalOpen(true)}
+            onOpenChat={() => setChatOpen(true)}
+          />
+        )}
+      </div>
+
+      {/* Floating Gemini AI Sahayak Button */}
+      <button
+        onClick={() => setChatOpen(true)}
+        className="fixed bottom-5 left-5 z-40 flex items-center gap-2 px-4 py-2.5 rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-bold shadow-xl shadow-blue-950/50 border border-blue-400/30 active:scale-95 transition-all"
+        title="AI Digital Sahayak (ગુજરાતી / English)"
+      >
+        <Sparkles className="w-4 h-4 text-amber-300 animate-pulse" />
+        <span>AI ડિજિટલ સહાયક</span>
+      </button>
+
+      {/* Gemini AI Multi-turn Chatbot Drawer */}
+      <DirectorChat
+        isOpen={chatOpen}
+        onClose={() => setChatOpen(false)}
+        messages={chatMessages}
+        onSendMessage={handleChatSendMessage}
+        isLoading={chatLoading}
+        currentRole={chatRole}
+        onRoleChange={setChatRole}
+      />
+
+      {/* Admin Login Modal */}
+      <AdminLoginModal
+        isOpen={adminLoginModalOpen}
+        onClose={() => setAdminLoginModalOpen(false)}
+        onAdminLoginSuccess={(email) => {
+          setAdminUser(email);
+          localStorage.setItem('srk_admin_email', email);
+          setView('admin');
+          fetchApplications();
+          showToast('Admin Portal unlocked!');
+        }}
+      />
+    </div>
+  );
+}
