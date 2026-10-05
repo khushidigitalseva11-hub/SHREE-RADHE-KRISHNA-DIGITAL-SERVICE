@@ -32,21 +32,39 @@ interface DatabaseData {
   otps: Record<string, { otp: string; expires_at: number; attempts: number }>;
 }
 
-const DATA_DIR = path.join(process.cwd(), '.data');
+import os from 'os';
+
+const isServerless = Boolean(
+  process.env.VERCEL ||
+  process.env.AWS_LAMBDA_FUNCTION_NAME ||
+  (typeof process.cwd === 'function' && process.cwd().startsWith('/var/task'))
+);
+const DATA_DIR = isServerless ? path.join(os.tmpdir(), '.srk_data') : path.join(process.cwd(), '.data');
 const DATA_FILE = path.join(DATA_DIR, 'db.json');
 
+let memoryDb: DatabaseData | null = null;
+
 function initLocalDb(): DatabaseData {
-  if (!fs.existsSync(DATA_DIR)) {
-    fs.mkdirSync(DATA_DIR, { recursive: true });
+  if (memoryDb) {
+    return memoryDb;
   }
 
-  if (fs.existsSync(DATA_FILE)) {
-    try {
-      const raw = fs.readFileSync(DATA_FILE, 'utf-8');
-      return JSON.parse(raw);
-    } catch (e) {
-      console.warn('Error reading local db file, re-initializing:', e);
+  try {
+    if (!fs.existsSync(DATA_DIR)) {
+      fs.mkdirSync(DATA_DIR, { recursive: true });
     }
+  } catch (e) {
+    // Read-only filesystem or serverless container
+  }
+
+  try {
+    if (fs.existsSync(DATA_FILE)) {
+      const raw = fs.readFileSync(DATA_FILE, 'utf-8');
+      memoryDb = JSON.parse(raw);
+      if (memoryDb) return memoryDb;
+    }
+  } catch (e) {
+    // Non-blocking fallback
   }
 
   // Initial Seed
@@ -204,15 +222,20 @@ function initLocalDb(): DatabaseData {
     otps: {},
   };
 
+  memoryDb = initialDb;
   saveLocalDb(initialDb);
   return initialDb;
 }
 
 function saveLocalDb(data: DatabaseData) {
+  memoryDb = data;
   try {
+    if (!fs.existsSync(DATA_DIR)) {
+      fs.mkdirSync(DATA_DIR, { recursive: true });
+    }
     fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2), 'utf-8');
   } catch (e) {
-    console.error('Error saving local db:', e);
+    // Non-blocking in serverless/read-only environments where memoryDb serves the request
   }
 }
 
