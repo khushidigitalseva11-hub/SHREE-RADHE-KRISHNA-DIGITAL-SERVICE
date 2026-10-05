@@ -325,8 +325,11 @@ export async function dbCreateApplication(data: {
   applicant_mobile: string;
   form_data: Record<string, any>;
 }): Promise<DigitalApplication> {
+  const allServices = await dbGetServices();
   const db = initLocalDb();
-  const service = db.services.find((s) => s.id === data.service_id);
+  const service =
+    allServices.find((s) => s.id === data.service_id || s.service_code === data.service_id) ||
+    db.services.find((s) => s.id === data.service_id || s.service_code === data.service_id);
   if (!service) throw new Error('Service not found or inactive');
 
   // Generate sequential number SRK-[CODE]-26-XXXXXX
