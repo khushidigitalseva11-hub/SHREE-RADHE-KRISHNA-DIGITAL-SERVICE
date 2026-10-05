@@ -1,0 +1,26 @@
+# Dependencies
+/node_modules
+/.pnp
+.pnp.js
+
+# Next.js build output
+/.next/
+/out/
+/build
+
+# Local Environment Variables
+.env*.local
+.env
+
+# Vercel
+.vercel
+
+# Local Data Cache
+.data/
+*.original_backup
+*.backup
+
+# OS and Editor
+.DS_Store
+Thumbs.db
+*.log
