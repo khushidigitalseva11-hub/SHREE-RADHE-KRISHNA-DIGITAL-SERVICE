@@ -557,7 +557,6 @@ $$;
 INSERT INTO system_settings (key, value, description) VALUES
 ('business_name', 'SHREE RADHE KRISHNA DIGITAL SERVICE', 'Official Business Name'),
 ('tagline_gu', 'તમારી ડિજિટલ સેવા, એક જ સ્થળે', 'Gujarati Tagline'),
-('mobile', '8511566026', 'Customer Care & WhatsApp Mobile Number'),
 ('email', 'khushidigitalseva11@gmail.com', 'Official Contact Email'),
 ('address', 'Rudra Complex, Timberwa Road, Sadhli, Taluka Shinor, District Vadodara, Gujarat, India', 'Physical Center Address'),
 ('working_hours', 'Monday–Saturday: 9:00 AM–7:00 PM, Sunday: Closed', 'Working Hours'),
@@ -567,7 +566,7 @@ ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value;
 
 -- Seed default admin account
 INSERT INTO admin_users (email, password_hash, full_name, mobile, role)
-VALUES ('khushidigitalseva11@gmail.com', crypt('Admin@SRK2026', gen_salt('bf')), 'Director - Shree Radhe Krishna Digital Service', '8511566026', 'admin')
+VALUES ('khushidigitalseva11@gmail.com', crypt('Admin@SRK2026', gen_salt('bf')), 'Director - Shree Radhe Krishna Digital Service', NULL, 'admin')
 ON CONFLICT (email) DO NOTHING;
 
 -- Seed the initial 21 services

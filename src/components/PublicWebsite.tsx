@@ -6,7 +6,6 @@ import {
 import { BUSINESS_INFO } from '@/lib/constants';
 import {
   Shield,
-  Phone,
   Sparkles,
   Search,
   CheckCircle2,
@@ -23,6 +22,7 @@ import {
   Award,
   ChevronRight,
   MessageCircle,
+  MessageSquare,
 } from 'lucide-react';
 
 interface PublicWebsiteProps {
@@ -100,15 +100,13 @@ export const PublicWebsite: React.FC<PublicWebsiteProps> = ({
               </button>
             )}
 
-            <a
-              href="https://wa.me/918511566026?text=નમસ્તે%20શ્રી%20રાધે%20કૃષ્ણ%20ડિજિટલ%20સેવા,%20મને%20માહિતી%20જોઈએ%20છે."
-              target="_blank"
-              rel="noopener noreferrer"
-              className="px-5 py-3.5 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/30 font-bold text-sm flex items-center gap-2 transition-all"
+            <button
+              onClick={onOpenChat}
+              className="px-5 py-3.5 rounded-xl bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 border border-blue-500/30 font-bold text-sm flex items-center gap-2 transition-all"
             >
-              <MessageCircle className="w-4 h-4 text-emerald-400" />
-              <span>WhatsApp ચેટ (8511566026)</span>
-            </a>
+              <MessageCircle className="w-4 h-4 text-blue-400" />
+              <span>ઓનલાઇન સહાય ચેટ (Live Chat)</span>
+            </button>
           </div>
 
           {/* Hero Digital Center Banner Asset */}
@@ -328,20 +326,21 @@ export const PublicWebsite: React.FC<PublicWebsiteProps> = ({
             </div>
 
             <div className="flex items-center justify-between text-xs pt-1">
-              <span className="text-slate-400">હેલ્પલાઇન / વોટ્સએપ:</span>
-              <a
-                href={`tel:${BUSINESS_INFO.mobile}`}
-                className="font-mono font-bold text-emerald-400 hover:underline"
+              <span className="text-slate-400">ઓનલાઇન સપોર્ટ:</span>
+              <button
+                onClick={onOpenChat}
+                className="font-medium text-blue-400 hover:text-blue-300 hover:underline flex items-center gap-1"
               >
-                +91 {BUSINESS_INFO.mobile}
-              </a>
+                <MessageSquare className="w-3.5 h-3.5" />
+                <span>લાઈવ સહાયક ચેટ (Start Chat)</span>
+              </button>
             </div>
 
-            <div className="flex items-center justify-between text-xs">
-              <span className="text-slate-400">ઈમેલ:</span>
+            <div className="flex items-center justify-between text-xs pt-1">
+              <span className="text-slate-400">સત્તાવાર ઈમેલ (Email):</span>
               <a
                 href={`mailto:${BUSINESS_INFO.email}`}
-                className="font-mono text-blue-400 hover:underline"
+                className="font-mono text-emerald-400 hover:underline font-semibold"
               >
                 {BUSINESS_INFO.email}
               </a>
@@ -433,12 +432,11 @@ export const PublicWebsite: React.FC<PublicWebsiteProps> = ({
             </button>
 
             <a
-              href="https://wa.me/918511566026"
-              target="_blank"
-              rel="noreferrer"
-              className="text-slate-400 hover:text-emerald-400 transition-colors"
+              href={`mailto:${BUSINESS_INFO.email}`}
+              className="text-slate-400 hover:text-blue-400 transition-colors flex items-center gap-1"
             >
-              WhatsApp
+              <Mail className="w-3 h-3" />
+              <span>{BUSINESS_INFO.email}</span>
             </a>
           </div>
         </div>

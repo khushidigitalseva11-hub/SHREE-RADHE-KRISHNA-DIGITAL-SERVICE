@@ -5,7 +5,6 @@ export const BUSINESS_INFO = {
   name_gu: 'શ્રી રાધે કૃષ્ણ ડિજિટલ સેવા',
   tagline_gu: 'તમારી ડિજિટલ સેવા, એક જ સ્થળે',
   tagline_en: 'Your Complete Digital Service, Under One Roof',
-  mobile: '8511566026',
   email: 'khushidigitalseva11@gmail.com',
   address: 'Rudra Complex, Timberwa Road, Sadhli, Taluka Shinor, District Vadodara, Gujarat, India.',
   workingHours: 'Monday–Saturday: 9:00 AM–7:00 PM (Sunday Closed)',

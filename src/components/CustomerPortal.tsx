@@ -23,7 +23,6 @@ import {
   ExternalLink,
   Download,
   AlertCircle,
-  Phone,
   Search,
   Filter,
   CheckCircle2,

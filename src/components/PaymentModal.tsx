@@ -32,7 +32,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
 
   if (!isOpen || !application) return null;
 
-  const upiId = '8511566026@upi';
+  const upiId = 'khushidigitalseva11@upi';
   const upiPayUrl = `upi://pay?pa=${upiId}&pn=Shree Radhe Krishna Digital Service&am=${application.locked_price}&cu=INR&tn=SRK Application ${application.application_number}`;
 
   const handleCopyUpi = () => {

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Smartphone, KeyRound, User, MapPin, Mail, ArrowRight, RefreshCw, CheckCircle2 } from 'lucide-react';
 import { CustomerProfile } from '@/types/digitalSeva';
+import { BUSINESS_INFO } from '@/lib/constants';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -149,7 +150,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLoginSu
                   type="tel"
                   required
                   maxLength={10}
-                  placeholder="8511566026"
+                  placeholder="9876543210"
                   value={mobile}
                   onChange={(e) => setMobile(e.target.value.replace(/\D/g, ''))}
                   className="w-full bg-[#1e293b] border border-slate-700 focus:border-blue-500 rounded-xl pl-12 pr-4 py-2.5 text-sm text-white placeholder-slate-500 outline-none transition-all font-mono"
@@ -269,7 +270,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLoginSu
 
         <div className="mt-6 pt-4 border-t border-slate-800 text-center">
           <p className="text-[11px] text-slate-400">
-            સહાય માટે સંપર્ક: <span className="text-white font-semibold">8511566026</span> (સોમ-શનિ 9-7)
+            સહાય માટે ઈમેલ: <a href={`mailto:${BUSINESS_INFO.email}`} className="text-white font-semibold hover:underline">{BUSINESS_INFO.email}</a>
           </p>
         </div>
       </div>

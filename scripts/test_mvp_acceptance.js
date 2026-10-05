@@ -30,7 +30,7 @@ async function runTest() {
     const otpRes = await fetch(`${BASE_URL}/api/auth/send-otp`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ mobile: '8511566026' })
+      body: JSON.stringify({ mobile: '9825100001' })
     });
     const otpData = await otpRes.json();
     assert(otpData.success, 'Customer A OTP request succeeded');
@@ -39,7 +39,7 @@ async function runTest() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        mobile: '8511566026',
+        mobile: '9825100001',
         otp: '123456',
         name: 'Rameshbhai Patel',
         email: 'ramesh.patel@example.com',
@@ -69,7 +69,7 @@ async function runTest() {
       customer_id: customerA.id,
       service_id: pmKisanService.id,
       applicant_name: 'Rameshbhai Somabhai Patel',
-      applicant_mobile: '8511566026',
+      applicant_mobile: '9825100001',
       form_data: {
         farmer_name: 'Rameshbhai Somabhai Patel',
         aadhaar_no: '987654321098',

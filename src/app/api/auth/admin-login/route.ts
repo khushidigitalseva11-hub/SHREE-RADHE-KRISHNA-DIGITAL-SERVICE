@@ -7,7 +7,7 @@ export async function POST(req: Request) {
 
     // Default admin credential checks
     const isAdmin =
-      (email === 'khushidigitalseva11@gmail.com' && (password === 'Admin@SRK2026' || password === 'admin123' || password === '8511566026')) ||
+      (email === 'khushidigitalseva11@gmail.com' && (password === 'Admin@SRK2026' || password === 'admin123')) ||
       (email === 'admin@srkdigital.online' && password === 'admin123');
 
     if (!isAdmin) {

@@ -20,7 +20,6 @@ import { SupportTicketModal } from '@/components/SupportTicketModal';
 import {
   Shield,
   Sparkles,
-  Phone,
   User,
   ArrowRight,
   Globe,
@@ -225,7 +224,7 @@ export default function Home() {
             </span>
             <span className="text-slate-600 hidden sm:inline">•</span>
             <span className="text-slate-400 text-[11px] hidden sm:inline">
-              📍 Rudra Complex, Timberwa Road, Sadhli, Vadodara • 📞 8511566026
+              📍 Rudra Complex, Timberwa Road, Sadhli, Vadodara • ✉️ {BUSINESS_INFO.email}
             </span>
           </div>
 
@@ -344,17 +343,15 @@ export default function Home() {
         <span>AI ડિજિટલ સહાયક</span>
       </button>
 
-      {/* Floating WhatsApp Button */}
-      <a
-        href="https://wa.me/918511566026?text=Hello%20Shree%20Radhe%20Krishna%20Digital%20Service,%20I%20need%20assistance."
-        target="_blank"
-        rel="noopener noreferrer"
-        className="fixed bottom-5 right-5 z-40 flex items-center gap-2 px-4 py-2.5 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-xl shadow-emerald-950/50 border border-emerald-400/30 active:scale-95 transition-all"
-        title="WhatsApp Support (8511566026)"
+      {/* Floating Customer Support Chat Button */}
+      <button
+        onClick={() => setChatDrawerOpen(true)}
+        className="fixed bottom-5 right-5 z-40 flex items-center gap-2 px-4 py-2.5 rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-bold shadow-xl shadow-blue-950/50 border border-blue-400/30 active:scale-95 transition-all"
+        title="Customer Support Chat"
       >
-        <MessageCircle className="w-4 h-4 fill-current" />
-        <span className="hidden sm:inline">WhatsApp 8511566026</span>
-      </a>
+        <MessageCircle className="w-4 h-4" />
+        <span className="hidden sm:inline">ઓનલાઇન સહાયક ચેટ (Live Chat)</span>
+      </button>
 
       {/* Customer Mobile OTP Auth Modal */}
       <AuthModal

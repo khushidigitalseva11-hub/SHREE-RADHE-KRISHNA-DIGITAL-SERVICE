@@ -8,7 +8,7 @@ import {
   User,
   CheckCheck,
   RefreshCw,
-  Phone,
+  Mail,
   FileText,
 } from 'lucide-react';
 import { CustomerProfile, ChatMessage, DigitalApplication } from '@/types/digitalSeva';
@@ -144,7 +144,7 @@ export const CustomerChatDrawer: React.FC<CustomerChatDrawerProps> = ({
             sender_id: 'ai-bot',
             sender_role: 'model',
             sender_name: 'System',
-            message_text: 'ક્ષમા કરશો, સર્વર સાથે સંપર્ક થઈ શક્યો નથી. WhatsApp પર સંપર્ક કરો: 8511566026',
+            message_text: 'ક્ષમા કરશો, સર્વર સાથે સંપર્ક થઈ શક્યો નથી. કૃપા કરીને સપોર્ટ ટિકિટ બનાવો અથવા khushidigitalseva11@gmail.com પર ઈમેલ સંપર્ક કરો.',
             created_at: new Date().toISOString(),
           },
         ]);
@@ -245,15 +245,13 @@ export const CustomerChatDrawer: React.FC<CustomerChatDrawerProps> = ({
           </button>
         </div>
 
-        {/* WhatsApp Direct Help */}
+        {/* Email Direct Help */}
         <a
-          href="https://wa.me/918511566026?text=Hello%20Shree%20Radhe%20Krishna%20Digital%20Service,%20I%20need%20help"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-[11px] text-emerald-400 hover:underline flex items-center gap-1 font-medium"
+          href="mailto:khushidigitalseva11@gmail.com"
+          className="text-[11px] text-blue-400 hover:underline flex items-center gap-1 font-medium"
         >
-          <Phone className="w-3 h-3" />
-          <span>WhatsApp 8511566026</span>
+          <Mail className="w-3 h-3" />
+          <span>khushidigitalseva11@gmail.com</span>
         </a>
       </div>
 
