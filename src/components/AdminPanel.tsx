@@ -1,10 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   DigitalService,
   DigitalApplication,
   ApplicationStatus,
   APPLICATION_STATUSES,
   DynamicFormField,
+  ChatConversation,
+  ChatMessage,
+  SupportTicket,
+  SupportTicketMessage,
+  ApplicationDocument,
 } from '@/types/digitalSeva';
 import { StatusBadge } from './StatusBadge';
 import {
@@ -31,6 +36,11 @@ import {
   Check,
   X,
   FileUp,
+  Send,
+  Eye,
+  Paperclip,
+  Clock,
+  Award,
 } from 'lucide-react';
 
 interface AdminPanelProps {
@@ -59,6 +69,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
     | 'form_builder'
     | 'documents'
     | 'payments'
+    | 'chats'
+    | 'support'
     | 'reports'
     | 'audit_logs'
   >('dashboard');
@@ -73,6 +85,17 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   const [statusRemark, setStatusRemark] = useState('');
   const [updatingStatus, setUpdatingStatus] = useState(false);
 
+  // Final Document Upload Modal
+  const [finalDocModalOpen, setFinalDocModalOpen] = useState(false);
+  const [finalDocName, setFinalDocName] = useState('Certificate.pdf');
+  const [finalDocUrl, setFinalDocUrl] = useState('/downloads/final_doc.pdf');
+  const [finalDocRemark, setFinalDocRemark] = useState('Final document processed and ready for download.');
+  const [uploadingFinalDoc, setUploadingFinalDoc] = useState(false);
+
+  // Application Detail Modal
+  const [appDetailModalOpen, setAppDetailModalOpen] = useState(false);
+  const [reviewReason, setReviewReason] = useState('');
+
   // Edit / Add Service State
   const [serviceModalOpen, setServiceModalOpen] = useState(false);
   const [editingService, setEditingService] = useState<Partial<DigitalService>>({});
@@ -81,6 +104,188 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   const [selectedServiceForForm, setSelectedServiceForForm] = useState<DigitalService | null>(
     services[0] || null
   );
+
+  // Live Chat State
+  const [conversations, setConversations] = useState<ChatConversation[]>([]);
+  const [activeConversation, setActiveConversation] = useState<ChatConversation | null>(null);
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [adminReplyText, setAdminReplyText] = useState('');
+  const [sendingReply, setSendingReply] = useState(false);
+
+  // Support Tickets State
+  const [supportTickets, setSupportTickets] = useState<SupportTicket[]>([]);
+  const [activeTicket, setActiveTicket] = useState<SupportTicket | null>(null);
+  const [ticketReplyText, setTicketReplyText] = useState('');
+  const [sendingTicketReply, setSendingTicketReply] = useState(false);
+
+  // Initial load for chats and support tickets
+  useEffect(() => {
+    fetchChats();
+    fetchSupportTickets();
+  }, [activeTab]);
+
+  const fetchChats = async () => {
+    try {
+      const res = await fetch('/api/chat/conversations');
+      if (res.ok) {
+        const data = await res.json();
+        setConversations(data || []);
+        if (data && data.length > 0 && !activeConversation) {
+          setActiveConversation(data[0]);
+          loadChatMessages(data[0].id);
+        }
+      }
+    } catch (e) {
+      console.warn('Fetch conversations error:', e);
+    }
+  };
+
+  const loadChatMessages = async (convId: string) => {
+    try {
+      const res = await fetch(`/api/chat/messages?conversation_id=${convId}`);
+      if (res.ok) {
+        const data = await res.json();
+        setChatMessages(data || []);
+      }
+    } catch (e) {
+      console.warn('Fetch messages error:', e);
+    }
+  };
+
+  const fetchSupportTickets = async () => {
+    try {
+      const res = await fetch('/api/support/tickets');
+      if (res.ok) {
+        const data = await res.json();
+        setSupportTickets(data || []);
+        if (data && data.length > 0 && !activeTicket) {
+          setActiveTicket(data[0]);
+        }
+      }
+    } catch (e) {
+      console.warn('Fetch tickets error:', e);
+    }
+  };
+
+  const handleSendAdminReply = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!adminReplyText.trim() || !activeConversation) return;
+
+    setSendingReply(true);
+    try {
+      const res = await fetch('/api/chat/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          conversation_id: activeConversation.id,
+          sender_id: 'admin',
+          sender_role: 'admin',
+          sender_name: 'Director (Admin)',
+          message_text: adminReplyText.trim(),
+        }),
+      });
+
+      if (res.ok) {
+        const newMsg = await res.json();
+        setChatMessages((prev) => [...prev, newMsg]);
+        setAdminReplyText('');
+        fetchChats();
+      }
+    } catch (e) {
+      alert('Error sending reply');
+    } finally {
+      setSendingReply(false);
+    }
+  };
+
+  const handleSendTicketReply = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!ticketReplyText.trim() || !activeTicket) return;
+
+    setSendingTicketReply(true);
+    try {
+      const res = await fetch(`/api/support/tickets/${activeTicket.id}/messages`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sender_id: 'admin',
+          sender_role: 'admin',
+          sender_name: 'Director (Admin)',
+          message_text: ticketReplyText.trim(),
+        }),
+      });
+
+      if (res.ok) {
+        setTicketReplyText('');
+        fetchSupportTickets();
+      }
+    } catch (e) {
+      alert('Error sending ticket reply');
+    } finally {
+      setSendingTicketReply(false);
+    }
+  };
+
+  const handleUpdateTicketStatus = async (ticketId: string, status: 'Open' | 'In Progress' | 'Resolved' | 'Closed') => {
+    try {
+      await fetch('/api/support/tickets', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ticket_id: ticketId, status }),
+      });
+      fetchSupportTickets();
+    } catch (e) {
+      alert('Error updating ticket status');
+    }
+  };
+
+  // Review Document (Verify or Reject / Re-upload Required)
+  const handleReviewDocument = async (docId: string, status: 'Verified' | 'Rejected' | 'Re-upload Required') => {
+    const reason = status !== 'Verified' ? prompt('Enter rejection / re-upload reason for the citizen:') : '';
+    if (status !== 'Verified' && !reason) return;
+
+    try {
+      const res = await fetch(`/api/documents/${docId}/review`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status, reason }),
+      });
+      if (res.ok) {
+        await onRefresh();
+        alert(`Document marked as ${status}`);
+      }
+    } catch (e) {
+      alert('Error reviewing document');
+    }
+  };
+
+  // Final Document Upload & Complete
+  const handleUploadFinalDocSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedApp) return;
+
+    setUploadingFinalDoc(true);
+    try {
+      const res = await fetch(`/api/applications/${selectedApp.id}/final-document`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          file_name: finalDocName,
+          file_url: finalDocUrl,
+          remark: finalDocRemark,
+        }),
+      });
+
+      if (!res.ok) throw new Error('Failed to upload final document');
+      await onRefresh();
+      setFinalDocModalOpen(false);
+      alert('Final document uploaded. Application marked as Completed!');
+    } catch (err: any) {
+      alert(err.message || 'Error uploading final document');
+    } finally {
+      setUploadingFinalDoc(false);
+    }
+  };
 
   // Compute metrics
   const totalRevenue = applications.reduce((acc, app) => {
@@ -139,7 +344,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   };
 
   return (
-    <div className="min-h-screen bg-[#090d16] text-slate-100 flex flex-col">
+    <div className="min-h-screen bg-[#090d16] text-slate-100 flex flex-col font-sans">
       {/* Top Admin Header */}
       <header className="bg-[#0b101c] border-b border-emerald-500/20 px-4 sm:px-6 py-3">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
@@ -150,10 +355,10 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
             <div>
               <div className="flex items-center gap-2">
                 <h1 className="text-sm font-bold text-white tracking-wide">
-                  શ્રી રાધે કૃષ્ણ ડિજિટલ સેવા • ADMIN CONTROL
+                  શ્રી રાધે કૃષ્ણ ડિજિટલ સેવા • ADMIN CONTROL PANEL
                 </h1>
                 <span className="text-[10px] font-mono bg-emerald-500/10 text-emerald-400 px-2 py-0.5 rounded border border-emerald-500/20">
-                  OPERATOR
+                  MVP VERIFIED
                 </span>
               </div>
               <p className="text-[11px] text-slate-400 font-mono">{adminEmail}</p>
@@ -205,6 +410,30 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
           >
             <FileText className="w-3.5 h-3.5" />
             <span>Applications ({applications.length})</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('chats')}
+            className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-colors ${
+              activeTab === 'chats'
+                ? 'bg-emerald-600 text-white font-bold'
+                : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            <MessageSquare className="w-3.5 h-3.5" />
+            <span>Customer Chats ({conversations.length})</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('support')}
+            className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-colors ${
+              activeTab === 'support'
+                ? 'bg-emerald-600 text-white font-bold'
+                : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            <LifeBuoy className="w-3.5 h-3.5" />
+            <span>Support Requests ({supportTickets.length})</span>
           </button>
 
           <button
@@ -286,7 +515,6 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
         {/* TAB 1: DASHBOARD OVERVIEW */}
         {activeTab === 'dashboard' && (
           <div className="space-y-6">
-            {/* Top Revenue & Status Summary */}
             <div className="p-6 rounded-2xl bg-[#0f172a] border border-emerald-500/20 shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
                 <span className="text-[11px] font-mono text-emerald-400 uppercase tracking-wider font-bold">
@@ -355,7 +583,6 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                       <th className="py-2.5 px-3">Application No</th>
                       <th className="py-2.5 px-3">Service</th>
                       <th className="py-2.5 px-3">Applicant</th>
-                      <th className="py-2.5 px-3">Mobile</th>
                       <th className="py-2.5 px-3">Locked Fee</th>
                       <th className="py-2.5 px-3">Status</th>
                       <th className="py-2.5 px-3">Action</th>
@@ -368,20 +595,28 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                           {app.application_number}
                         </td>
                         <td className="py-2.5 px-3 font-medium text-white">{app.service_name}</td>
-                        <td className="py-2.5 px-3">{app.applicant_name}</td>
-                        <td className="py-2.5 px-3 font-mono">{app.applicant_mobile}</td>
+                        <td className="py-2.5 px-3">{app.applicant_name} ({app.applicant_mobile})</td>
                         <td className="py-2.5 px-3 font-mono text-emerald-400 font-bold">
                           ₹{app.locked_price}
                         </td>
                         <td className="py-2.5 px-3">
                           <StatusBadge status={app.status} size="sm" showGujarati={false} />
                         </td>
-                        <td className="py-2.5 px-3">
+                        <td className="py-2.5 px-3 space-x-1.5">
+                          <button
+                            onClick={() => {
+                              setSelectedApp(app);
+                              setAppDetailModalOpen(true);
+                            }}
+                            className="px-2 py-1 rounded bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 font-semibold text-[11px] border border-blue-500/30"
+                          >
+                            Details
+                          </button>
                           <button
                             onClick={() => handleOpenStatusModal(app)}
-                            className="px-2.5 py-1 rounded bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 font-semibold text-[11px] border border-emerald-500/30"
+                            className="px-2 py-1 rounded bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 font-semibold text-[11px] border border-emerald-500/30"
                           >
-                            Update
+                            Status
                           </button>
                         </td>
                       </tr>
@@ -460,18 +695,270 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                         <td className="py-3 px-4 text-[11px] text-slate-400 font-mono">
                           {new Date(app.submitted_at).toLocaleDateString()}
                         </td>
-                        <td className="py-3 px-4 text-right space-x-2">
+                        <td className="py-3 px-4 text-right space-x-1.5">
+                          <button
+                            onClick={() => {
+                              setSelectedApp(app);
+                              setAppDetailModalOpen(true);
+                            }}
+                            className="px-2.5 py-1 rounded bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 font-semibold text-xs border border-blue-500/30"
+                          >
+                            Details & Docs
+                          </button>
+
                           <button
                             onClick={() => handleOpenStatusModal(app)}
-                            className="px-3 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs shadow-sm"
+                            className="px-2.5 py-1 rounded bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs shadow-sm"
                           >
-                            Update Status
+                            Update
+                          </button>
+
+                          <button
+                            onClick={() => {
+                              setSelectedApp(app);
+                              setFinalDocModalOpen(true);
+                            }}
+                            className="px-2.5 py-1 rounded bg-cyan-600 hover:bg-cyan-500 text-white font-semibold text-xs shadow-sm"
+                            title="Upload Final Document"
+                          >
+                            Final Doc
                           </button>
                         </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* TAB: CUSTOMER CHATS */}
+        {activeTab === 'chats' && (
+          <div className="bg-[#0f172a] rounded-2xl border border-slate-800 overflow-hidden shadow-xl grid grid-cols-1 md:grid-cols-3 h-[600px]">
+            {/* Conversation List */}
+            <div className="border-r border-slate-800 flex flex-col h-full bg-[#0b101c]">
+              <div className="p-3.5 border-b border-slate-800 font-bold text-xs text-white">
+                Customer Conversations ({conversations.length})
+              </div>
+              <div className="flex-1 overflow-y-auto divide-y divide-slate-800">
+                {conversations.map((conv) => (
+                  <div
+                    key={conv.id}
+                    onClick={() => {
+                      setActiveConversation(conv);
+                      loadChatMessages(conv.id);
+                    }}
+                    className={`p-3.5 cursor-pointer text-xs transition-colors ${
+                      activeConversation?.id === conv.id
+                        ? 'bg-blue-600/20 text-white border-l-4 border-blue-500'
+                        : 'text-slate-400 hover:bg-slate-900/60 hover:text-white'
+                    }`}
+                  >
+                    <div className="flex justify-between items-start mb-1">
+                      <strong className="text-white">{conv.customer_name || 'Customer'}</strong>
+                      <span className="text-[10px] text-slate-500 font-mono">
+                        {new Date(conv.last_message_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    </div>
+                    {conv.application_number && (
+                      <span className="text-[10px] font-mono text-blue-400 block mb-1">
+                        App: {conv.application_number}
+                      </span>
+                    )}
+                    <p className="text-[11px] truncate text-slate-300">{conv.last_message}</p>
+                  </div>
+                ))}
+                {conversations.length === 0 && (
+                  <p className="p-6 text-center text-xs text-slate-500">No active customer chats</p>
+                )}
+              </div>
+            </div>
+
+            {/* Message Thread */}
+            <div className="col-span-2 flex flex-col h-full bg-[#090d16]">
+              {activeConversation ? (
+                <>
+                  <div className="p-3.5 border-b border-slate-800 flex items-center justify-between text-xs bg-[#111827]">
+                    <div>
+                      <strong className="text-white block text-sm">{activeConversation.customer_name}</strong>
+                      <span className="text-slate-400 text-[11px]">
+                        Mobile: {activeConversation.customer_mobile || 'N/A'} • {activeConversation.application_number || 'General Chat'}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex-1 overflow-y-auto p-4 space-y-3">
+                    {chatMessages.map((msg) => {
+                      const isAdmin = msg.sender_role === 'admin';
+                      return (
+                        <div key={msg.id} className={`flex flex-col ${isAdmin ? 'items-end' : 'items-start'}`}>
+                          <span className="text-[10px] text-slate-500 px-1 mb-0.5">
+                            {msg.sender_name || (isAdmin ? 'Admin' : 'Customer')}
+                          </span>
+                          <div
+                            className={`max-w-[80%] rounded-xl px-3.5 py-2 text-xs leading-relaxed ${
+                              isAdmin
+                                ? 'bg-emerald-600 text-white rounded-br-none'
+                                : 'bg-slate-800 text-slate-200 rounded-bl-none'
+                            }`}
+                          >
+                            <p className="whitespace-pre-line">{msg.message_text}</p>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  <form onSubmit={handleSendAdminReply} className="p-3 border-t border-slate-800 flex gap-2 bg-[#111827]">
+                    <input
+                      type="text"
+                      placeholder="Type reply to customer..."
+                      value={adminReplyText}
+                      onChange={(e) => setAdminReplyText(e.target.value)}
+                      className="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2 text-xs text-white outline-none"
+                    />
+                    <button
+                      type="submit"
+                      disabled={sendingReply || !adminReplyText.trim()}
+                      className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs disabled:opacity-50 flex items-center gap-1.5"
+                    >
+                      <Send className="w-3.5 h-3.5" />
+                      <span>Reply</span>
+                    </button>
+                  </form>
+                </>
+              ) : (
+                <div className="flex-1 flex items-center justify-center text-xs text-slate-500">
+                  Select a customer conversation to chat
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* TAB: SUPPORT REQUESTS */}
+        {activeTab === 'support' && (
+          <div className="space-y-4">
+            <h2 className="text-base font-bold text-white">ગ્રાહક સપોર્ટ વિનંતીઓ (Support Tickets)</h2>
+
+            <div className="bg-[#0f172a] rounded-2xl border border-slate-800 overflow-hidden shadow-xl grid grid-cols-1 md:grid-cols-3 h-[600px]">
+              {/* Ticket List */}
+              <div className="border-r border-slate-800 flex flex-col h-full bg-[#0b101c]">
+                <div className="p-3.5 border-b border-slate-800 font-bold text-xs text-white">
+                  Tickets List ({supportTickets.length})
+                </div>
+                <div className="flex-1 overflow-y-auto divide-y divide-slate-800">
+                  {supportTickets.map((tkt) => (
+                    <div
+                      key={tkt.id}
+                      onClick={() => setActiveTicket(tkt)}
+                      className={`p-3.5 cursor-pointer text-xs transition-colors ${
+                        activeTicket?.id === tkt.id
+                          ? 'bg-blue-600/20 text-white border-l-4 border-blue-500'
+                          : 'text-slate-400 hover:bg-slate-900/60 hover:text-white'
+                      }`}
+                    >
+                      <div className="flex justify-between items-start mb-1">
+                        <span className="font-mono font-bold text-blue-400">{tkt.ticket_number}</span>
+                        <span
+                          className={`text-[10px] font-bold px-2 py-0.5 rounded ${
+                            tkt.status === 'Open'
+                              ? 'bg-rose-500/20 text-rose-400'
+                              : tkt.status === 'Resolved'
+                              ? 'bg-emerald-500/20 text-emerald-400'
+                              : 'bg-amber-500/20 text-amber-400'
+                          }`}
+                        >
+                          {tkt.status}
+                        </span>
+                      </div>
+                      <p className="font-semibold text-white truncate">{tkt.subject}</p>
+                      <p className="text-[11px] text-slate-500 mt-0.5">
+                        {tkt.customer_name} ({tkt.category})
+                      </p>
+                    </div>
+                  ))}
+                  {supportTickets.length === 0 && (
+                    <p className="p-6 text-center text-xs text-slate-500">No support tickets</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Ticket Thread */}
+              <div className="col-span-2 flex flex-col h-full bg-[#090d16]">
+                {activeTicket ? (
+                  <>
+                    <div className="p-3.5 border-b border-slate-800 flex items-center justify-between text-xs bg-[#111827]">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-mono font-bold text-blue-400">{activeTicket.ticket_number}</span>
+                          <span className="text-white font-bold">{activeTicket.subject}</span>
+                        </div>
+                        <span className="text-slate-400 text-[11px]">
+                          Citizen: {activeTicket.customer_name} ({activeTicket.customer_mobile}) • Category: {activeTicket.category}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-1.5">
+                        <select
+                          value={activeTicket.status}
+                          onChange={(e: any) => handleUpdateTicketStatus(activeTicket.id, e.target.value)}
+                          className="bg-slate-900 border border-slate-700 text-white rounded-lg px-2.5 py-1 text-xs outline-none"
+                        >
+                          <option value="Open">Open</option>
+                          <option value="In Progress">In Progress</option>
+                          <option value="Resolved">Resolved</option>
+                          <option value="Closed">Closed</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="flex-1 overflow-y-auto p-4 space-y-3">
+                      {activeTicket.messages?.map((msg) => {
+                        const isAdmin = msg.sender_role === 'admin';
+                        return (
+                          <div key={msg.id} className={`flex flex-col ${isAdmin ? 'items-end' : 'items-start'}`}>
+                            <span className="text-[10px] text-slate-500 px-1 mb-0.5">
+                              {msg.sender_name || (isAdmin ? 'Admin' : 'Customer')}
+                            </span>
+                            <div
+                              className={`max-w-[80%] rounded-xl px-3.5 py-2 text-xs leading-relaxed ${
+                                isAdmin
+                                  ? 'bg-emerald-600 text-white rounded-br-none'
+                                  : 'bg-slate-800 text-slate-200 rounded-bl-none'
+                              }`}
+                            >
+                              <p className="whitespace-pre-line">{msg.message_text}</p>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    <form onSubmit={handleSendTicketReply} className="p-3 border-t border-slate-800 flex gap-2 bg-[#111827]">
+                      <input
+                        type="text"
+                        placeholder="Type official reply to resolve citizen inquiry..."
+                        value={ticketReplyText}
+                        onChange={(e) => setTicketReplyText(e.target.value)}
+                        className="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2 text-xs text-white outline-none"
+                      />
+                      <button
+                        type="submit"
+                        disabled={sendingTicketReply || !ticketReplyText.trim()}
+                        className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs disabled:opacity-50 flex items-center gap-1.5"
+                      >
+                        <Send className="w-3.5 h-3.5" />
+                        <span>Send</span>
+                      </button>
+                    </form>
+                  </>
+                ) : (
+                  <div className="flex-1 flex items-center justify-center text-xs text-slate-500">
+                    Select a support ticket to review and reply
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -614,7 +1101,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                 </div>
 
                 <div className="space-y-3">
-                  {(selectedServiceForForm.form_fields || []).map((field, idx) => (
+                  {(selectedServiceForForm.form_fields || []).map((field) => (
                     <div
                       key={field.id}
                       className="p-4 rounded-xl bg-[#162035] border border-slate-700/80 flex items-center justify-between text-xs"
@@ -655,7 +1142,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
         {/* TAB 5: DOCUMENT MANAGER */}
         {activeTab === 'documents' && (
           <div className="space-y-4">
-            <h2 className="text-base font-bold text-white">દસ્તાવેજ વ્યવસ્થાપન (Document Manager)</h2>
+            <h2 className="text-base font-bold text-white">દસ્તાવેજ વ્યવસ્થાપન (Document Review & Verification)</h2>
             <div className="bg-[#0f172a] rounded-2xl border border-slate-800 p-5 space-y-3">
               {applications.flatMap((a) => a.documents || []).length > 0 ? (
                 applications
@@ -665,7 +1152,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                   .map((doc) => (
                     <div
                       key={doc.id}
-                      className="p-3.5 rounded-xl bg-[#162035] border border-slate-700/70 flex items-center justify-between text-xs"
+                      className="p-3.5 rounded-xl bg-[#162035] border border-slate-700/70 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs"
                     >
                       <div>
                         <div className="flex items-center gap-2">
@@ -676,14 +1163,30 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                       </div>
 
                       <div className="flex items-center gap-2">
-                        <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-500/20 text-blue-400">
+                        <span
+                          className={`px-2.5 py-0.5 rounded text-[10px] font-bold ${
+                            doc.status === 'Verified'
+                              ? 'bg-emerald-500/20 text-emerald-400'
+                              : doc.status === 'Re-upload Required' || doc.status === 'Rejected'
+                              ? 'bg-rose-500/20 text-rose-400'
+                              : 'bg-blue-500/20 text-blue-400'
+                          }`}
+                        >
                           {doc.status}
                         </span>
+
                         <button
-                          onClick={() => alert(`Reviewing doc ${doc.file_name}`)}
-                          className="px-3 py-1 rounded bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-200"
+                          onClick={() => handleReviewDocument(doc.id, 'Verified')}
+                          className="px-2.5 py-1 rounded bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 font-semibold text-xs border border-emerald-500/30"
                         >
-                          View / Review
+                          Approve
+                        </button>
+
+                        <button
+                          onClick={() => handleReviewDocument(doc.id, 'Re-upload Required')}
+                          className="px-2.5 py-1 rounded bg-rose-600/20 hover:bg-rose-600/30 text-rose-300 font-semibold text-xs border border-rose-500/30"
+                        >
+                          Reject / Re-upload
                         </button>
                       </div>
                     </div>
@@ -698,7 +1201,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
         {/* TAB 6: PAYMENTS */}
         {activeTab === 'payments' && (
           <div className="space-y-4">
-            <h2 className="text-base font-bold text-white">ચુકવણી વ્યવહારો (Payment Orders)</h2>
+            <h2 className="text-base font-bold text-white">ચુકવણી વ્યવહારો (Payment Orders & Verification)</h2>
             <div className="p-5 rounded-2xl bg-[#0f172a] border border-slate-800">
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs text-slate-300">
@@ -717,7 +1220,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                         <td className="py-2.5 px-3 font-mono font-bold text-blue-400">
                           {app.application_number}
                         </td>
-                        <td className="py-2.5 px-3">{app.applicant_name}</td>
+                        <td className="py-2.5 px-3">{app.applicant_name} ({app.applicant_mobile})</td>
                         <td className="py-2.5 px-3 font-mono font-bold text-emerald-400">
                           ₹{app.locked_price}
                         </td>
@@ -871,6 +1374,179 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                 )}
               </button>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Upload Final Document Modal */}
+      {finalDocModalOpen && selectedApp && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
+          <div className="relative w-full max-w-lg bg-[#0f172a] border border-cyan-500/40 rounded-2xl p-6 shadow-2xl text-slate-100">
+            <button
+              onClick={() => setFinalDocModalOpen(false)}
+              className="absolute top-4 right-4 p-1.5 text-slate-400 hover:text-white"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <h3 className="text-base font-bold text-white mb-1">
+              અંતિમ પરિણામ અપલોડ (Upload Final Certificate / Smart Card)
+            </h3>
+            <p className="text-xs text-slate-400 font-mono mb-4">
+              {selectedApp.application_number} • {selectedApp.service_name}
+            </p>
+
+            <form onSubmit={handleUploadFinalDocSubmit} className="space-y-4">
+              <div>
+                <label className="block text-xs font-medium text-slate-300 mb-1">
+                  દસ્તાવેજ ફાઇલ નામ (File Name) *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={finalDocName}
+                  onChange={(e) => setFinalDocName(e.target.value)}
+                  placeholder="e.g. PM_Kisan_Registration_Receipt.pdf"
+                  className="w-full bg-[#162035] border border-slate-700 rounded-xl px-3 py-2 text-xs text-white outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-slate-300 mb-1">
+                  ફાઇલ ડાઉનલોડ પાથ / URL *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={finalDocUrl}
+                  onChange={(e) => setFinalDocUrl(e.target.value)}
+                  className="w-full bg-[#162035] border border-slate-700 rounded-xl px-3 py-2 text-xs text-white outline-none font-mono"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-slate-300 mb-1">
+                  સમાપ્તિ નોંધ (Completion Remark for Citizen)
+                </label>
+                <textarea
+                  rows={2}
+                  value={finalDocRemark}
+                  onChange={(e) => setFinalDocRemark(e.target.value)}
+                  className="w-full bg-[#162035] border border-slate-700 rounded-xl px-3 py-2 text-xs text-white outline-none resize-none"
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={uploadingFinalDoc}
+                className="w-full py-2.5 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-bold text-xs shadow-lg shadow-cyan-950/50 disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {uploadingFinalDoc ? (
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                ) : (
+                  <>
+                    <Award className="w-4 h-4" />
+                    <span>Upload & Mark as Completed</span>
+                  </>
+                )}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Application Detail & Docs Review Modal */}
+      {appDetailModalOpen && selectedApp && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
+          <div className="relative w-full max-w-2xl bg-[#0f172a] border border-blue-500/40 rounded-2xl p-6 shadow-2xl text-slate-100 max-h-[85vh] overflow-y-auto space-y-4">
+            <button
+              onClick={() => setAppDetailModalOpen(false)}
+              className="absolute top-4 right-4 p-1.5 text-slate-400 hover:text-white"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+              <div>
+                <span className="font-mono text-sm font-bold text-blue-400">
+                  {selectedApp.application_number}
+                </span>
+                <h3 className="text-base font-bold text-white mt-0.5">{selectedApp.service_name}</h3>
+              </div>
+              <StatusBadge status={selectedApp.status} />
+            </div>
+
+            {/* Applicant & Form Data */}
+            <div className="grid grid-cols-2 gap-3 bg-[#162035] p-4 rounded-xl text-xs">
+              <div>
+                <span className="text-slate-400 block">Applicant Name:</span>
+                <strong className="text-white">{selectedApp.applicant_name}</strong>
+              </div>
+              <div>
+                <span className="text-slate-400 block">Mobile:</span>
+                <strong className="text-white font-mono">{selectedApp.applicant_mobile}</strong>
+              </div>
+              <div>
+                <span className="text-slate-400 block">Locked Fee:</span>
+                <strong className="text-emerald-400 font-mono text-sm">₹{selectedApp.locked_price}</strong>
+              </div>
+              <div>
+                <span className="text-slate-400 block">Submitted At:</span>
+                <strong className="text-white font-mono">{new Date(selectedApp.submitted_at).toLocaleString()}</strong>
+              </div>
+            </div>
+
+            {/* Dynamic Form Data Submitted */}
+            <div>
+              <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wide mb-2">
+                અરજદારે ભરેલી વિગત (Submitted Dynamic Form Data)
+              </h4>
+              <pre className="p-3 rounded-xl bg-slate-900 border border-slate-800 text-[11px] font-mono text-blue-200 overflow-x-auto">
+                {JSON.stringify(selectedApp.form_data, null, 2)}
+              </pre>
+            </div>
+
+            {/* Uploaded Documents List */}
+            <div>
+              <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wide mb-2">
+                અપલોડ થયેલ દસ્તાવેજો (Uploaded Documents Review)
+              </h4>
+              <div className="space-y-2">
+                {(selectedApp.documents || []).length > 0 ? (
+                  selectedApp.documents?.map((doc) => (
+                    <div
+                      key={doc.id}
+                      className="p-3 rounded-xl bg-[#162035] border border-slate-700/80 flex items-center justify-between text-xs"
+                    >
+                      <div>
+                        <span className="font-semibold text-white block">{doc.doc_name}</span>
+                        <span className="text-[11px] text-slate-400 font-mono">{doc.file_name}</span>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-blue-500/20 text-blue-400">
+                          {doc.status}
+                        </span>
+                        <button
+                          onClick={() => handleReviewDocument(doc.id, 'Verified')}
+                          className="px-2.5 py-1 rounded bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 font-semibold text-xs border border-emerald-500/30"
+                        >
+                          Approve
+                        </button>
+                        <button
+                          onClick={() => handleReviewDocument(doc.id, 'Re-upload Required')}
+                          className="px-2.5 py-1 rounded bg-rose-600/20 hover:bg-rose-600/30 text-rose-300 font-semibold text-xs border border-rose-500/30"
+                        >
+                          Reject
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-xs text-slate-500 bg-[#162035] p-3 rounded-xl">No documents attached.</p>
+                )}
+              </div>
+            </div>
           </div>
         </div>
       )}

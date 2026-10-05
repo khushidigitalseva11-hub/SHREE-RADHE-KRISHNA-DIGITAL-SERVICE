@@ -202,6 +202,7 @@ export interface ApplicationDocument {
   rejection_reason?: string;
   uploaded_by: string;
   created_at: string;
+  updated_at?: string;
 }
 
 export interface PaymentRecord {

@@ -472,6 +472,28 @@ export async function dbReviewDocument(docId: string, status: 'Verified' | 'Reje
 
   doc.status = status;
   doc.rejection_reason = reason;
+  doc.updated_at = new Date().toISOString();
+
+  // If rejected or re-upload requested, transition application to Correction Required
+  if (status === 'Rejected' || status === 'Re-upload Required') {
+    const app = db.applications.find((a) => a.id === doc.application_id);
+    if (app) {
+      const prevStatus = app.status;
+      app.status = 'Correction Required';
+      app.admin_remark = reason || 'Document rejected. Please upload corrected document.';
+      app.updated_at = new Date().toISOString();
+      if (!app.status_history) app.status_history = [];
+      app.status_history.push({
+        id: 'hist-' + Date.now(),
+        application_id: app.id,
+        previous_status: prevStatus,
+        new_status: 'Correction Required',
+        changed_by: 'Admin',
+        remark: reason || 'Document verification rejected. Correction required.',
+        created_at: new Date().toISOString(),
+      });
+    }
+  }
 
   db.audit_logs.unshift({
     id: 'audit-' + Date.now(),
@@ -481,6 +503,94 @@ export async function dbReviewDocument(docId: string, status: 'Verified' | 'Reje
     details: { status, reason },
     created_at: new Date().toISOString(),
   });
+
+  saveLocalDb(db);
+  return doc;
+}
+
+export async function dbUploadFinalDocument(
+  applicationId: string,
+  fileName: string,
+  fileUrl: string,
+  remark?: string
+): Promise<DigitalApplication> {
+  const db = initLocalDb();
+  const app = db.applications.find((a) => a.id === applicationId);
+  if (!app) throw new Error('Application not found');
+
+  app.final_document_name = fileName;
+  app.final_document_url = fileUrl;
+  app.status = 'Completed';
+  app.admin_remark = remark || 'Final government document/certificate uploaded and ready for customer download.';
+  app.updated_at = new Date().toISOString();
+
+  if (!app.status_history) app.status_history = [];
+  app.status_history.push({
+    id: 'hist-' + Date.now(),
+    application_id: app.id,
+    previous_status: 'Processing',
+    new_status: 'Completed',
+    changed_by: 'Admin',
+    remark: app.admin_remark,
+    created_at: new Date().toISOString(),
+  });
+
+  // Notification for Customer
+  db.notifications.unshift({
+    id: 'notif-' + Date.now(),
+    user_id: app.customer_id,
+    title: `અરજી પૂર્ણ થયેલ છે: ${app.application_number}`,
+    message: `તમારું પ્રમાણપત્ર / કાર્ડ (${fileName}) સફળતાપૂર્વક તૈયાર છે. ડાઉનલોડ કરવા માટે ક્લિક કરો.`,
+    type: 'document',
+    link: '/portal',
+    is_read: false,
+    created_at: new Date().toISOString(),
+  });
+
+  db.audit_logs.unshift({
+    id: 'audit-' + Date.now(),
+    action: 'Final Document Uploaded',
+    entity_type: 'applications',
+    entity_id: app.id,
+    details: { app_number: app.application_number, file_name: fileName },
+    created_at: new Date().toISOString(),
+  });
+
+  saveLocalDb(db);
+  return app;
+}
+
+export async function dbReuploadDocument(
+  docId: string,
+  newFileName: string,
+  newFilePath?: string
+): Promise<ApplicationDocument> {
+  const db = initLocalDb();
+  const doc = db.documents.find((d) => d.id === docId);
+  if (!doc) throw new Error('Document not found');
+
+  doc.file_name = newFileName;
+  doc.file_path = newFilePath || `/uploads/${newFileName}`;
+  doc.status = 'Uploaded';
+  doc.rejection_reason = undefined;
+  doc.updated_at = new Date().toISOString();
+
+  // If application was in Correction Required, transition it back to Document Checking
+  const app = db.applications.find((a) => a.id === doc.application_id);
+  if (app && app.status === 'Correction Required') {
+    app.status = 'Document Checking';
+    app.updated_at = new Date().toISOString();
+    if (!app.status_history) app.status_history = [];
+    app.status_history.push({
+      id: 'hist-' + Date.now(),
+      application_id: app.id,
+      previous_status: 'Correction Required',
+      new_status: 'Document Checking',
+      changed_by: 'Customer',
+      remark: `Customer re-uploaded document: ${newFileName}`,
+      created_at: new Date().toISOString(),
+    });
+  }
 
   saveLocalDb(db);
   return doc;
