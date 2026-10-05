@@ -1,7 +1,15 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import './globals.css';
 
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  themeColor: '#090d16',
+};
+
 export const metadata: Metadata = {
+  metadataBase: new URL('https://srkdigital.online'),
   title: 'SHREE RADHE KRISHNA DIGITAL SERVICE | તમારી ડિજિટલ સેવા, એક જ સ્થળે',
   description:
     'શ્રી રાધે કૃષ્ણ ડિજિટલ સેવા - સાધલી, શિનોર, વડોદરા. PAN Card, આયુષ્માન ભારત, PM કિસાન, આવકનો દાખલો, ઈ-નિર્માણ, ચૂંટણી કાર્ડ અને All India PVC કાર્ડ સ્માર્ટ ડિલિવરી.',
@@ -15,9 +23,20 @@ export const metadata: Metadata = {
     'PM Kisan KYC',
     'PVC Card Printing',
     'Income Certificate Gujarat',
+    'srkdigital.online',
   ],
   authors: [{ name: 'Shree Radhe Krishna Digital Service' }],
-  viewport: 'width=device-width, initial-scale=1, maximum-scale=1',
+  alternates: {
+    canonical: 'https://srkdigital.online',
+  },
+  openGraph: {
+    title: 'SHREE RADHE KRISHNA DIGITAL SERVICE | તમારી ડિજિટલ સેવા, એક જ સ્થળે',
+    description: 'PAN Card, આયુષ્માન ભારત, PM કિસાન, સરકારી યોજનાઓ અને ઓલ ઇન્ડિયા PVC કાર્ડ હોમ ડિલિવરી.',
+    url: 'https://srkdigital.online',
+    siteName: 'Shree Radhe Krishna Digital Service',
+    locale: 'gu_IN',
+    type: 'website',
+  },
 };
 
 export default function RootLayout({
